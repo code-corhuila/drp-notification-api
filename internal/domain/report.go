@@ -25,18 +25,18 @@ type ReportSource struct {
 
 // Report is an immutable snapshot after GeneratedAt (ADR-007). Built via HTTP, never tables.
 type Report struct {
-	ID            string
-	Kind          ReportKind
-	State         ReportState
-	RequestedBy   string
-	PeriodStart   time.Time
-	PeriodEnd     time.Time
-	SpaceID       string
+	ID             string
+	Kind           ReportKind
+	State          ReportState
+	RequestedBy    string
+	PeriodStart    time.Time
+	PeriodEnd      time.Time
+	SpaceID        string
 	IdempotencyKey string
-	Sources       []ReportSource
-	Rows          []map[string]any
-	GeneratedAt   *time.Time
-	CreatedAt     time.Time
+	Sources        []ReportSource
+	Rows           []map[string]any
+	GeneratedAt    *time.Time
+	CreatedAt      time.Time
 }
 
 func NewReport(id, kind, requestedBy, spaceID, idempotencyKey string, start, end, now time.Time) (Report, error) {
