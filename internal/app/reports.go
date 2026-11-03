@@ -92,9 +92,7 @@ func (s Reports) List(ctx context.Context, f ReportListFilter) (ReportPage, erro
 	if total%f.Limit != 0 {
 		totalPages++
 	}
-	if totalPages == 0 {
-		totalPages = 1
-	}
+	// D-C9: total = 0 → totalPages 0, not 1.
 	start := (f.Page - 1) * f.Limit
 	if start >= total {
 		return ReportPage{Items: []domain.Report{}, Page: f.Page, Limit: f.Limit, Total: total, TotalPages: totalPages}, nil
