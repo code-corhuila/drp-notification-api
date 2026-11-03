@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	httpadapter "github.com/code-corhuila/drp-notification-api/internal/adapters/http"
 	"github.com/code-corhuila/drp-notification-api/internal/adapters/memory"
+	mongostore "github.com/code-corhuila/drp-notification-api/internal/adapters/mongo"
 	"github.com/code-corhuila/drp-notification-api/internal/adapters/security"
 	"github.com/code-corhuila/drp-notification-api/internal/adapters/upstream"
 	"github.com/code-corhuila/drp-notification-api/internal/app"
@@ -34,14 +36,30 @@ func main() {
 		},
 	})
 	httpClient := &http.Client{Timeout: 3 * time.Second}
+	inbox := app.NotificationStore(memory.NewMailbox())
+	reportStore := app.ReportStore(memory.NewReports())
+	reportKeys := app.ReportIdempotency(memory.NewReportKeys())
+	storeName := "memory inbox + reports"
+	if mongoURL := os.Getenv("MONGO_URL"); mongoURL != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		box, err := mongostore.Open(ctx, mongoURL)
+		cancel()
+		if err != nil {
+			log.Fatal(err)
+		}
+		inbox = box.Notifications
+		reportStore = box.Reports
+		reportKeys = box.Keys
+		storeName = "mongo notification.notifications + reports"
+	}
 	mux := httpadapter.NewMux(httpadapter.Deps{
 		Service: service,
 		Mailbox: app.Mailbox{
-			Store: memory.NewMailbox(),
+			Store: inbox,
 		},
 		Reports: app.Reports{
-			Store:        memory.NewReports(),
-			Idempotency:  memory.NewReportKeys(),
+			Store:        reportStore,
+			Idempotency:  reportKeys,
 			Payments:     catalog("drp-payment-api", os.Getenv("PAYMENT_API_URL"), "/api/v1/payments", httpClient),
 			Reservations: catalog("drp-reservation-api", os.Getenv("RESERVATION_API_URL"), "/api/v1/reservations", httpClient),
 			Spaces:       catalog("drp-space-api", os.Getenv("SPACE_API_URL"), "/api/v1/spaces", httpClient),
@@ -50,7 +68,7 @@ func main() {
 		InternalToken: os.Getenv("INTERNAL_EVENT_TOKEN"),
 	})
 
-	log.Printf("drp-notification-api listening on %s (memory inbox + reports; POST /internal/events; E-20…E-22 aggregate HTTP; JWKS %s; Mongo later)", addr, jwksURL)
+	log.Printf("drp-notification-api listening on %s (%s; POST /internal/events; E-20…E-22 aggregate HTTP; JWKS %s)", addr, storeName, jwksURL)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
