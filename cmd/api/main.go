@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	httpadapter "github.com/code-corhuila/drp-notification-api/internal/adapters/http"
@@ -65,7 +66,7 @@ func main() {
 			Spaces:       catalog("drp-space-api", os.Getenv("SPACE_API_URL"), "/api/v1/spaces", httpClient),
 		},
 		Tokens:        tokens,
-		InternalToken: os.Getenv("INTERNAL_EVENT_TOKEN"),
+		InternalToken: firstEnv("NOTIFICATION_INTERNAL_TOKEN", "INTERNAL_EVENT_TOKEN"),
 	})
 
 	log.Printf("drp-notification-api listening on %s (%s; POST /internal/events; E-20…E-22 aggregate HTTP; JWKS %s)", addr, storeName, jwksURL)
@@ -79,4 +80,13 @@ func catalog(name, base, path string, client *http.Client) app.Catalog {
 		return memory.StaticCatalog{Name: name}
 	}
 	return upstream.HTTPCatalog{Name: name, BaseURL: base, Path: path, Client: client}
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+			return v
+		}
+	}
+	return ""
 }
