@@ -176,6 +176,36 @@ func TestConsumeThenListOwnInbox(t *testing.T) {
 	if denied.StatusCode != http.StatusNotFound {
 		t.Fatalf("foreign get %d", denied.StatusCode)
 	}
+
+	other := "55555555-5555-4555-8555-555555555555"
+	otherGet, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/notifications/"+env.Data[0].ID, nil)
+	otherGet.Header.Set("Authorization", keys.bearer(t, other, "USER"))
+	otherDenied, err := http.DefaultClient.Do(otherGet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer otherDenied.Body.Close()
+	if otherDenied.StatusCode != http.StatusNotFound {
+		t.Fatalf("other USER get %d", otherDenied.StatusCode)
+	}
+
+	otherList, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/notifications", nil)
+	otherList.Header.Set("Authorization", keys.bearer(t, other, "USER"))
+	otherListed, err := http.DefaultClient.Do(otherList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer otherListed.Body.Close()
+	if otherListed.StatusCode != http.StatusOK {
+		t.Fatalf("other list %d", otherListed.StatusCode)
+	}
+	var otherEnv listEnvelope
+	if err := json.NewDecoder(otherListed.Body).Decode(&otherEnv); err != nil {
+		t.Fatal(err)
+	}
+	if otherEnv.Meta.Total != 0 || len(otherEnv.Data) != 0 {
+		t.Fatalf("other USER list must be empty %+v", otherEnv)
+	}
 }
 
 func TestInternalEventWithoutTokenIs401(t *testing.T) {
@@ -262,5 +292,35 @@ func TestAdminCreatesAndExportsReport(t *testing.T) {
 	}
 	if !strings.Contains(got.Header.Get("Content-Disposition"), "attachment") {
 		t.Fatalf("disposition %s", got.Header.Get("Content-Disposition"))
+	}
+
+	otherAdmin := "77777777-7777-4777-8777-777777777777"
+	foreign, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/reports/"+created.ID, nil)
+	foreign.Header.Set("Authorization", keys.bearer(t, otherAdmin, "ADMIN"))
+	denied, err := http.DefaultClient.Do(foreign)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer denied.Body.Close()
+	if denied.StatusCode != http.StatusNotFound {
+		t.Fatalf("foreign report GET %d", denied.StatusCode)
+	}
+
+	otherList, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/reports", nil)
+	otherList.Header.Set("Authorization", keys.bearer(t, otherAdmin, "ADMIN"))
+	otherListed, err := http.DefaultClient.Do(otherList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer otherListed.Body.Close()
+	if otherListed.StatusCode != http.StatusOK {
+		t.Fatalf("foreign report list %d", otherListed.StatusCode)
+	}
+	var otherEnv reportListEnvelope
+	if err := json.NewDecoder(otherListed.Body).Decode(&otherEnv); err != nil {
+		t.Fatal(err)
+	}
+	if otherEnv.Meta.Total != 0 {
+		t.Fatalf("other ADMIN report list must be empty %+v", otherEnv)
 	}
 }
