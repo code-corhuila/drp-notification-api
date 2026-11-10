@@ -20,12 +20,12 @@ const (
 type EventType string
 
 const (
-	EventUserRegistered         EventType = "user.registered"
-	EventReservationCreated     EventType = "ReservationCreated"
-	EventPaymentConfirmed       EventType = "PaymentConfirmed"
-	EventPaymentFailed          EventType = "PaymentFailed"
-	EventReservationConfirmed   EventType = "ReservationConfirmed"
-	EventReservationCancelled   EventType = "ReservationCancelled"
+	EventUserRegistered       EventType = "user.registered"
+	EventReservationCreated   EventType = "ReservationCreated"
+	EventPaymentConfirmed     EventType = "PaymentConfirmed"
+	EventPaymentFailed        EventType = "PaymentFailed"
+	EventReservationConfirmed EventType = "ReservationConfirmed"
+	EventReservationCancelled EventType = "ReservationCancelled"
 )
 
 func parseChannel(v string) (Channel, error) {
